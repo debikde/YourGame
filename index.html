@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Твоя игра</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-align: center;
+            background-color: #282c34;
+            color: white;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1, h3 {
+            color: #61dafb;
+        }
+
+        .add-player {
+            margin: 20px;
+            padding: 10px;
+            background-color: #61dafb;
+            color: #282c34;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 18px;
+        }
+
+        .add-player:hover {
+            background-color: #21a1f1;
+        }
+
+        table {
+            width: 80%;
+            margin: 20px auto;
+            border-collapse: collapse;
+            background-color: #333;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        th, td {
+            padding: 15px;
+            border: 1px solid #444;
+            font-size: 18px;
+        }
+
+        th {
+            background-color: #444;
+            color: #61dafb;
+        }
+
+        td {
+            background-color: #3b3f45;
+            cursor: pointer;
+        }
+
+        .leader {
+            background-color: #ffd45e !important;
+            color: #ffd45e;
+        }
+
+        .animated-image {
+            position: absolute;
+            top: 50%;
+            left: -200px; /* Стартовая позиция за экраном слева */
+            transform: translateY(-50%);
+            animation: fly-across 4s ease-in-out forwards;
+        }
+
+        @keyframes fly-across {
+            0% {
+                left: -400px; /* За пределами экрана слева */
+            }
+            50% {
+                left: 30%; /* Центр экрана */
+            }
+            60% {
+                left: 30%; /* Задержка в центре */
+            }
+            100% {
+                left: 100%; /* За пределами экрана справа */
+            }
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: #333;
+            padding: 30px;
+            border-radius: 10px;
+            width: 500px;
+            text-align: center;
+        }
+
+        .modal-content h3 {
+            color: #61dafb;
+        }
+
+        .modal-content button {
+            background-color: #61dafb;
+            color: #282c34;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        .modal-content button:hover {
+            background-color: #21a1f1;
+        }
+
+        .score-input input {
+            padding: 8px;
+            width: 100px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: none;
+        }
+        .test {
+            background-color: chartreuse;
+            width: 200px;
+            height: 350px;
+            padding: 20px 50px;
+            margin: 90px;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+<img src="./image/Группа%201.png" style="width: 400px; height: 200px">
+<img id="animatedImage" src="./image/Группа%201.png" class="animated-image" style="width: 700px; height: 500px">
+<div class="animated-image" style="background-size: 100%; background-color: #3b3f45"></div>
+<div>
+    <h3>Добавление игроков</h3>
+    <input type="text" id="playerName" placeholder="Введите имя игрока" />
+    <button class="add-player" onclick="addPlayer()">Добавить игрока</button>
+</div>
+
+<table id="playersTable">
+    <thead>
+    <tr>
+        <th>Имя игрока</th>
+        <th>Очки</th>
+        <th>Тема</th>
+    </tr>
+    </thead>
+    <tbody id="playersList">
+
+    </tbody>
+</table>
+
+<div class="theme-selection">
+    <h3>Выбор темы для <span id="themePlayer" style="color: chartreuse; font-style: bold"></span></h3>
+    <select id="themeList">
+
+    </select>
+    <button class="add-player" onclick="assignTheme()">Присвоить тему</button>
+</div>
+
+<!-- Модальное окно -->
+<div id="questionModal" class="modal">
+    <div class="modal-content">
+        <h3>Вопрос для <span id="currentPlayer" style="color: chartreuse; font: bold"></span> по теме: <span id="playerTopic"></span></h3>
+        <p id="questionText">Здесь будет отображен вопрос</p>
+        <button onclick="showAnswer()">Показать ответ</button>
+    </div>
+</div>
+
+<div id="answerModal" class="modal">
+    <div class="modal-content">
+        <h3>Правильный ответ: <span id="correctAnswer">Здесь будет отображен правильный ответ</span></h3>
+        <div class="score-input">
+            <input type="number" id="score" placeholder="Введите баллы" />
+            <button onclick="updateScore()">Присвоить баллы</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let allScore = 0;
+    const players = [];
+    const topics = ['Математика', 'Право', 'Загадки', 'Игры', 'Бинарные вопросы', 'Наука - Вопросы для 6 класса',  'Музыка', 'Для старых', 'История', 'Кино'];
+    const questions = {
+        'Математика': [
+            { question: 'Сколько существует признаков равенств треугольника?', answer: '3' },
+            { question: 'Биссектриса, ... (продолжите)', answer: 'Медиана, высота' },
+            { question: 'Какой прозаический жанр является средним арифметическим между рассказом и романом? (Ебанутый вопрос, я сама ахуела)', answer: 'Ответ ебать нахуй - ПОВЕСТЬ' },
+            { question: 'Этот знак произошёл, как предполагают, благодаря опечатке. В рукописях слово “cento” (сто) писали сокращенно – cto. В 1685 году в Париже была напечатана книга, где по ошибке наборщик вместо cto набрал этот знак.', answer: 'Знак %' },
+            { question: 'Как ещё называют кубический дециметр?', answer: 'Литр' },
+            { question: 'Пользуясь четырьмя двойками и знаками действия, запишите число 111.', answer: '222 : 2' },
+            { question: 'Можно ли между цифрами 5 и 6 поставить какой-либо знак, чтобы получилось число, большее 5, но меньшее 6?', answer: '5 , 6 (запятая)' },
+            { question: 'Летела стая гусей. Один гусь впереди и два позади. Один гусь позади и два впереди, один между двумя и три в ряду. Сколько их было?', answer: '3' },
+            { question: 'Два велосипедиста выехали одновременно навстречу друг другу. Первый из пункта А со скоростью 20 км/ч, второй из пункта В со скоростью 15 км/ч. Какой из велосипедистов будет ближе к А в момент встречи?', answer: 'Одинаково ебать' },
+            { question: 'Три сотни умножили на две сотни. Сколько будет сотен?', answer: '600 сотен' }
+        ],
+        'Бинарные вопросы': [
+            { question: 'Изначально апельсины – оранжевые? Правда или ложь?', answer: 'Нет' },
+            { question: 'Площадь поверхности Плутона меньше чем площадь России?', answer: 'Нет' },
+            { question: 'Может ли Астронавт почесать нос в скафандре? ', answer: 'Да' },
+            { question: 'Помпон на шапке был изобретен ещё в 19 веке для французских моряков что бы они не ударялись об очень низкие потолки? ', answer: 'Да' },
+            { question: 'В Индии игральные карты круглые.', answer: 'Да' },
+            { question: 'Брокколи содержит больше витамина С, чем лимоны.', answer: 'Да' },
+            { question: 'Череп – самая крепкая кость в человеческом теле', answer: 'Нет' },
+            { question: 'Google изначально назывался BackRub.', answer: 'Да' },
+            { question: 'Бананы - это ягоды', answer: 'Да' },
+            { question: 'Придумайте вопрос для любого игрока, на который можно ответить только да или нет. Оцениваться в этом задании должна креативность вопроса.', answer: 'Пизда' },
+            { question: 'Жирафы говорят «му»', answer: 'Сказали да, но они че долбаебы жирафы не говорят' }
+        ],
+        'Загадки': [
+            { question: 'В семье афроамериканцев в Кении родился ребенок, весь белый, даже зубы были белоснежными. Что здесь не так?', answer: 'Дети рождаются без зубов (чаще всего)' },
+            { question: ' У матери Ольги пять дочерей: Ксения, Александра, Алла и Рума. Кто пятая дочь?', answer: 'Ольга' },
+            { question: 'Сколько кирпичей нужно, чтобы построить здание из кирпича?', answer: 'Один' },
+            { question: 'На границу России и Китая прилетел петух. Сел точно на границу, абсолютно посредине. Снёс яйцо. Оно упало точно поперек: граница делит его посредине. Какой стране принадлежит яйцо? ', answer: 'Пиздец петух снес яйцо' },
+            { question: 'Где впервые был обнаружен картофель?', answer: 'В земле' },
+            { question: 'Про что всегда говорят в будущем времени?', answer: 'Про будущее' },
+            { question: 'Что исчезает, как только вы произносите её имя?', answer: 'Тишина' },
+            { question: 'То висячий, то стоячий, то горячий, то холодный, я три буквы назову, в середине буква "у".', answer: 'Душ' },
+            { question: 'Место по отправке людей на небеса?', answer: 'Аэропорт' },
+            { question: 'Что это такое: синий, большой, с рогами и набит зайцами?', answer: 'Троллейбус' }
+        ],
+        'Право': [
+            { question: 'В какой стране запрещено смеяться в воскресенье?', answer: 'Швейцария' },
+            { question: 'Где нельзя носить обувь с высокими каблуками в исторических местах?', answer: 'В Греции' },
+            { question: 'Где запрещено кормить голубей?', answer: 'В Италии, Венеции' },
+            { question: 'В какой стране запрещено ходить с мороженым в кармане?', answer: 'В США, штат Кентукки' },
+            { question: 'В какой стране запрещено умирать в здании парламента?', answer: 'В Великобритании' },
+            { question: 'Где нельзя покупать игрушки по воскресеньям?', answer: 'В Германии' },
+            { question: 'Какой нелепый штраф можно получить за плохой танец?', answer: 'За слишком медленный танец в Испании' },
+            { question: 'В какой стране нельзя ехать на автомобиле, если в нем нет бензина?', answer: 'В Германии' },
+            { question: 'Где нельзя носить водолазные костюмы в центре города?', answer: 'В Австралии' },
+            { question: 'В какой стране запрещено свистеть после заката?', answer: 'В Литве' },
+            { question: 'Где нельзя фотографироваться с медведями?', answer: 'В США, штат Аляска' },
+        ],
+
+        'Игры': [
+            { question: 'Игра под названием Titan долгое время была в разработке, но позже переросла в другую. Назовите какое навзание она носит теперь.', answer: 'Overwatch' },
+            { question: 'Легендарный iphone создали два Стива, а эту легендарную игру создали два Джона. Назовите игру.', answer: 'DOOM' },
+            { question: 'Из-за какого события в GTA3 самолёту обрезали крылья?', answer: '11 сентября' },
+            { question: 'Разработчик этой игры на протяжении четырёх лет совмещал работу билетёра с разработкой', answer: 'Stardew Valley' },
+            { question: 'Первая самостоятельная игра OBSIDIAN', answer: 'Pillars of Eternity' },
+            { question: 'Первое название этой студии ничего не значило и было взято из документации к Amiga', answer: 'DMA (Rockstar)' },
+            { question: 'За какую сумму была продана студия Mojang (Minecraft) Майкрософт?', answer: '2.5млрд долларов' },
+            { question: 'Придумайте шахматы 2.5', answer: 'Молодец' },
+            { question: ' В старых игровых приставках часто писали, что их их приставка 8-16-32х битная. Что означает бит в этом контексте?', answer: 'Размер отдельного слова, обрабатываемого процессорами на консоли' },
+            { question: 'Сколько весит самая тяжелая игра? Назовите навзание и цифру', answer: 'Как мне сказал яндекс - Call of Duty 4: Modern Warfare и Call of Duty: Warzone 200ГБ' },
+            { question: 'В какой хоррор игре игрок не может посрать в кафе?', answer: 'Пять ночей с Фредди.' },
+
+        ],
+
+        'Музыка': [
+            { question: 'Кто насрал в кувшин?', answer: 'Билли Джин' },
+            { question: 'Какой город часто называют родиной джаза?', answer: 'Новый Орлеан — город в штате Луизиана, США' },
+            { question: 'Какой музыкальный альбом является самым продаваемым в мире за всю историю музыки?', answer: 'Thriller (с англ. — «Триллер») Майкл Джексон' },
+            { question: 'На каких музыкальных инструментах играл космонавт Герман Титов?', answer: 'На баяне, мандолине и скрипке' },
+            { question: 'В каком году состоялся первый конкурс эстрадной песни «Евровидение»?', answer: 'В 1956 году' },
+            { question: 'Как зовут соло-гитариста рок-группы «Кино»?', answer: 'Юрий Дмитриевич Каспарян' },
+            { question: 'В каком году умер Иосиф Кобзон?', answer: 'В 2018 году. Это произошло 30 августа. ' },
+            { question: 'Кто получил первую награду в музыкальной премии Муз-ТВ в номинации «Лучший исполнитель»?', answer: 'Филипп Киркоров' },
+            { question: 'Какой известный гитарист прославился тем, что играл зубами?', answer: 'Джими Хендрикс' },
+            { question: 'В каком году распалась группа The Beatles?', answer: 'В 1970 году' },
+            { question: 'Включите самую смешную песню. На поиски у вас есть 10 секунд.', answer: 'Молодец' },
+
+        ],
+
+        'Для старых': [
+            { question: 'Кого избрали на должность президента нашей страны 15 марта 1990 года?', answer: ' в этот день Михаил Горбачев стал Президентом СССР.' },
+            { question: 'Как назывался юмористический телесериал, в котором Дмитрий Нагиев и Сергей Рост показывали свое непревзойденное мастерство перевоплощений?', answer: '«Осторожно, модерн!»' },
+            { question: 'Что означает аббревиатура АОН?', answer: 'автоматический определитель номера. .'},
+            { question: 'Кто исполнял хиты 90-х «Желтые тюльпаны», «Дельфин и русалка» и «Маленькая страна»?', answer: 'Наташа Королева.' },
+            { question: 'Кто автор знаменитой фразы: «Если делать — так по-большому!»?', answer: 'председатель Правительства России (1992-1998) Виктор Черномырдин.' },
+            { question: 'Что рекламировали в видеорекламе, из-за которой в 90-е завирусилась фраза: «Тетя Ася приехала»?', answer: 'Средства для стирки Procter & Gamble.' },
+            { question: 'Какая кличка была у криминального авторитета, основателя и главаря Ореховской ОПГ Сергея Тимофеева, которого взорвали в  Mercedes-Benz 600?', answer: '«Силивестр».' },
+            { question: 'Из какого популярного в 90-е годы фильма эта фраза: «Тебя не пустят на банкет, когда в кармане баксов нет»?', answer: 'это фраза главного героя к/ф «Маска».' },
+            { question: '«Комок» — сленг из 90-х. Что это?', answer: 'так называли коммерческие магазины, которые продавали в розницу различные товары, начиная от продуктов и заканчивая вещами.' },
+            { question: 'Назовите точную дату, когда произошел дефолт в России', answer: '17 августа 1998 года. ' },
+            { question: 'Назовите возраст каждого из присутсвующих.', answer: 'Молодец' },
+
+        ],
+
+
+        'История': [
+            { question: 'Какому богу были посвящены Олимпийские игры в Греции?', answer: 'Зевсу.' },
+            { question: 'С кем обвенчалась будущая императрица Екатерина II в 1745 году?', answer: 'с Петром III.' },
+            { question: 'От какой империи Россия унаследовала двуглавого орла на гербе?', answer: 'от Византийской.'},
+            { question: 'Кто написал «Илиаду»?', answer: 'Гомер' },
+            { question: 'Лидером какой политической партии был Мао Цзэдун?', answer: 'Коммунистическая партия Китая.' },
+            { question: 'Кто в 1721 году принял титул российского императора?', answer: 'Петр I.' },
+            { question: 'Кто был первым русским царем?', answer: 'Иван IV Грозный.' },
+            { question: 'Какие современные страны входят в состав территории, некогда известной как Вавилонская империя?', answer: 'Ирак и Иран.' },
+            { question: '«Каковы семь чудес Древнего мира?', answer: 'великая пирамида в Гизе в Египте, Висячие сады Семирамиды, Статуя Зевса в Олимпии, Храм Артемиды в Эфесе, Мавзолей в Галикарнасе, Колосс Родосский и Александрийский маяк' },
+            { question: 'В каком году Русь освободилась от владычества Золотой орды?', answer: 'в 1480 году.' },
+            { question: 'Задай исторический вопрос любому игроку. Если он не ответит, ты получишь столько баллов, сколько скажешь.', answer: 'Молодец' },
+
+        ],
+
+
+        'Кино': [
+            { question: 'Где снимали трилогию «Властелин колец»?', answer: 'в Новой Зеландии.' },
+            { question: 'В какую страну отправился Форрест Гамп в составе сборной США по настольному теннису?', answer: 'в Китай' },
+            { question: 'Какая из культовых сцен «Криминального чтива» была снята задом наперед?', answer: 'сцена передозировки Мии \n Когда у персонажа Умы Турман случается передозировка, Джон Траволта вкалывает ей адреналин. На самом же деле Траволта, наоборот, вытаскивает иглу — просто пленку прокрутили в обратном направлении.'},
+            { question: 'Какого цвета полосатый свитер Фредди Крюгера?', answer: 'красно-зеленого' },
+            { question: 'Как называется вымышленная страна, где происходит действие в «Холодном сердце»?', answer: 'Эренделл' },
+            { question: 'Какой балл получила Эль Вудс за экзамен LSAT в фильме «Блондинка в законе»?', answer: ' 179.' },
+            { question: 'Какой фильм стал самым кассовым в 2014 году?', answer: '«Стражи Галактики»' },
+            { question: 'К Как называется лагерь из ужастика «Пятница 13-е», в котором происходят жуткие убийства?', answer: ' лагерь «Кристальное озеро»' },
+            { question: ' Звуки спаривания каких животных были звуком общения велоцирапторов в «Парке Юрского периода»?', answer: 'черепах' },
+            { question: 'В какой стране был снят фильм 2017 года «Назови меня своим именем»?', answer: ' в Италии' },
+            { question: 'Придумай описание для биографического фильма про себя.', answer: 'Молодец' },
+
+        ],
+
+        'Наука - Вопросы для 6 класса': [
+            { question: '«Отец медицины» Гиппократ восхвалял этот овощ как один из самых полезных даров природы. А знаменитый римский врач XI в. Гален назвал его « золотым корнем». Что это?', answer: 'Земля' },
+            { question: 'Почему после снегопада становится так тихо на улице? ', answer: 'Между пушинками свежевыпавшего снега существуют маленькие полости, благодаря которым такой снег поглощает звук.' },
+            { question: 'О каком камне идёт речь: «Я был когда-то смолою, из трещин стволов вытекал, искрился на солнце порою и липкой слезой застывал» ', answer: 'Янтарь' },
+            { question: 'Есть в нашей стране уникальный уголок. Здесь находится более сотни крупных и мелких гейзеров. Самый большой гейзер – Великан, высота его фонтана достигает 50 м. От бесконечных извержений вся долина в клубах пара. Что это за удивительное место? Где оно расположено?  ', answer: 'Долина Гейзеров, расположена в Кроноцком заповеднике на Камчатке. Открыта в 1941 г. геологом Т.И. Устиновой' },
+            { question: 'Это самое своеобразное море на земном шаре, его ещё называют Виноградным морем, «морем в океане». О каком море идёт речь? Почему его называют Виноградным? ', answer: 'Саргассово море, «саргассо» по португальски означает «гроздь винограда» (на листьях водорослей моряки заметили множество утолщений, похожих на виноградины).\n' +
+                    '50 Это самый большой остров нашей страны, в его очертаниях нередко видят сходство с лежащей на боку рыбой. Этот остров раньше считался полуостровом. Данное заблуждение развеяла экспедиция русского исследователя Г.И. Невельского в 1848-1849 гг. Остров Сахалин' },
+            { question: 'Однажды во время ночного марша карфагенского войска, которое под предводительством прославленного полководца Ганнибала совершало переход через Альпы, острия копий у воинов вдруг загорелись ярким пламенем. Попытки потушить огонь были тщетными. Пламя не угасало. Оно не обжигало, а только слегка потрескивало, освещая все вокруг, как днем.Что это за огни? Какова их природа? ', answer: 'Огни святого Эльма. Это тихие разряды электричества, возникающие при грозовых явлениях, во время снежных бурь, шквалов в местах образования области сильной наэлектризованности атмосферы.' },
+            { question: 'Кто открыл закон всемирного тяготения?', answer: 'Исаак Ньютон' },
+            { question: 'Этот русский учёный разработал устройство для передачи сообщений с помощью электромагнитного излучения, который имел звонок с молоточком. Это давало возможность принимать радиосигналы, несущие информацию, - азбуку Морзе.', answer: 'Александр Степанович Попов' },
+            { question: 'Русский путешественник - исследователь, первый изучивший жизнь папуасов и проживший с ними три года на острове Новая Гвинея', answer: 'Николай Николаевич Миклухо-Маклай' },
+            { question: 'Вспомните любой факт из школьной программы 6го класса', answer: 'Молодец' },
+            { question: 'Отгадайте шараду:\n' +
+                    'Первый слог – небольшой ресторан, где обслуживают за стойкой;\n' +
+                    'Второй слог – русское национальное блюдо;\n' +
+                    'Третий слог – предлог;\n' +
+                    'Целое – одна из феодальных повинностей', answer: 'Бар-щи-на барщина' }
+        ],
+
+
+    };
+    let currentPlayerIndex = 0;
+    let currentQuestion = {};
+    const playerQuestionsCount = []; 
+
+    function addPlayer() {
+        const playerName = document.getElementById('playerName').value;
+        if (playerName && players.length < 11) {
+            const player = {
+                name: playerName,
+                score: 0,
+                topic: ''
+            };
+            players.push(player);
+            playerQuestionsCount.push(0); // Инициализация счетчика вопросов
+            renderPlayers();
+            document.getElementById('playerName').value = '';
+            if (players.length >= 2) {
+                startThemeSelection();
+            }
+        }
+    }
+
+    function renderPlayers() {
+        const playerList = document.getElementById('playersList');
+        playerList.innerHTML = '';
+        players.forEach((player, index) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+          <td onclick="startQuestion(${index})">${player.name}</td>
+          <td id="score-${index}" onclick="startQuestion(${index})">${player.score}</td>
+          <td id="topic-${index}" onclick="startQuestion(${index})">${player.topic || 'Не выбрана'}</td>
+        `;
+            playerList.appendChild(row);
+        });
+        highlightLeader();
+    }
+
+    function startThemeSelection() {
+        if (currentPlayerIndex < players.length) {
+            document.getElementById('themePlayer').innerText = players[currentPlayerIndex].name;
+            renderThemes();
+            document.querySelector('.theme-selection').style.display = 'block';
+        }
+    }
+
+    function renderThemes() {
+        const themeList = document.getElementById('themeList');
+        themeList.innerHTML = '';
+        topics.forEach(topic => {
+            const option = document.createElement('option');
+            option.value = topic;
+            option.innerText = topic;
+            themeList.appendChild(option);
+        });
+    }
+
+    function assignTheme() {
+        const selectedTheme = document.getElementById('themeList').value;
+        if (selectedTheme) {
+            players[currentPlayerIndex].topic = selectedTheme;
+            topics.splice(topics.indexOf(selectedTheme), 1); // Удаляем тему из доступных
+            document.getElementById(`topic-${currentPlayerIndex}`).innerText = selectedTheme;
+            currentPlayerIndex++;
+
+            if (currentPlayerIndex < players.length) {
+                startThemeSelection();
+            } else {
+                document.querySelector('.theme-selection').style.display = 'none';
+            }
+        }
+    }
+    let askedQuestions = {};
+    function startQuestion(playerIndex) {
+        const player = players[playerIndex];
+        if (player.topic) {
+            document.getElementById('currentPlayer').innerText = player.name;
+            document.getElementById('playerTopic').innerText = player.topic;
+
+            const questionsForTopic = questions[player.topic];
+            const remainingQuestions = questionsForTopic.filter(question => !askedQuestions[player.topic]?.includes(question.question));
+            if (remainingQuestions.length === 0) {
+                alert('Все вопросы для этой темы были заданы.');
+                return;
+            }
+
+
+            currentQuestion = remainingQuestions[Math.floor(Math.random() * questionsForTopic.length)];
+            if (!askedQuestions[player.topic]) {
+                askedQuestions[player.topic] = [];
+            }
+            askedQuestions[player.topic].push(currentQuestion.question);
+
+            document.getElementById('questionText').innerText = currentQuestion.question;
+            openModal('questionModal');
+        } else {
+            alert('Тема для этого игрока не выбрана. Назначьте тему перед началом игры.');
+        }
+    }
+
+    function showAnswer() {
+        document.getElementById('correctAnswer').innerText = currentQuestion.answer;
+        closeModal('questionModal');
+        openModal('answerModal');
+    }
+
+    function updateScore() {
+        const playerName = document.getElementById('currentPlayer').innerText;
+        const score = parseInt(document.getElementById('score').value);
+        const playerIndex = players.findIndex(player => player.name === playerName);
+
+        if (playerIndex !== -1 && !isNaN(score)) {
+            players[playerIndex].score += score;
+            allScore += 1; // Увеличиваем счетчик вопросов
+
+            if (allScore % 2 === 0) {
+                shiftThemes();
+                allScore = 0;
+            }
+
+            document.getElementById(`score-${playerIndex}`).innerText = players[playerIndex].score;
+            closeModal('answerModal');
+            highlightLeader();
+        }
+    }
+
+    function shiftThemes() {
+        const lastTopic = players[players.length - 1].topic;
+        for (let i = players.length - 1; i > 0; i--) {
+            players[i].topic = players[i - 1].topic;
+            document.getElementById(`topic-${i}`).innerText = players[i].topic;
+        }
+        players[0].topic = lastTopic;
+        document.getElementById('topic-0').innerText = lastTopic;
+    }
+
+    function highlightLeader() {
+        let leaderIndex = 0;
+        players.forEach((player, index) => {
+            if (player.score > players[leaderIndex].score) {
+                leaderIndex = index;
+            }
+        });
+
+        const rows = document.querySelectorAll('#playersList tr');
+        rows.forEach(row => row.classList.remove('leader'));
+
+        rows[leaderIndex].classList.add('leader');
+    }
+
+    function openModal(modalId) {
+        document.getElementById(modalId).style.display = 'flex';
+    }
+
+    function closeModal(modalId) {
+        document.getElementById(modalId).style.display = 'none';
+    }
+
+    const animatedImage = document.getElementById('animatedImage');
+    animatedImage.addEventListener('animationend', function() {
+        animatedImage.remove();
+    });
+
+</script>
+
+</body>
+</html>
